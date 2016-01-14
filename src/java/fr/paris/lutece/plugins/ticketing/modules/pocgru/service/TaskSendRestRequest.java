@@ -78,13 +78,10 @@ public class TaskSendRestRequest extends SimpleTask
     // Constants for JSON message
     private static final String EMPTY_STRING = "";
     private static final String KEY_TICKET = "ticket";
-    private static final String KEY_TICKET_ID = "id";
-    private static final String KEY_TICKET_REFERENCE = "ref";
     private static final String KEY_TICKET_TYPE = "type";
     private static final String KEY_TICKET_DOMAIN = "domain";
     private static final String KEY_TICKET_CATEGORY = "category";
     private static final String KEY_TICKET_CONTACT_MODE = "contact_mode";
-    private static final String KEY_TICKET_STATUS = "status";
     private static final String KEY_TICKET_COMMENT = "comment";
     private static final String KEY_USER = "user";
     private static final String KEY_USER_ID = "guid";
@@ -246,7 +243,6 @@ public class TaskSendRestRequest extends SimpleTask
      */
     private static String buildErrorMessage( Ticket ticket, String strMessage )
     {
-        // TODO : replace ticket id with ticket reference
         return MessageFormat.format( ERROR_SENDING_TICKET, ticket.getId(  ), strMessage );
     }
 
@@ -278,9 +274,6 @@ public class TaskSendRestRequest extends SimpleTask
     private static void addTicketJson( JSONObject json, Ticket ticket )
     {
         JSONObject jsonTicket = new JSONObject(  );
-        jsonTicket.accumulate( KEY_TICKET_ID, ticket.getId(  ) );
-        // TODO : replace the empty String with ticket reference
-        jsonTicket.accumulate( KEY_TICKET_REFERENCE, EMPTY_STRING );
 
         JSONObject jsonUser = new JSONObject(  );
         jsonUser.accumulate( KEY_USER_ID, ticket.getGuid(  ) );
@@ -296,7 +289,6 @@ public class TaskSendRestRequest extends SimpleTask
         jsonTicket.accumulate( KEY_TICKET_DOMAIN, ticket.getIdTicketDomain(  ) );
         jsonTicket.accumulate( KEY_TICKET_CATEGORY, ticket.getIdTicketCategory(  ) );
         jsonTicket.accumulate( KEY_TICKET_CONTACT_MODE, ticket.getIdContactMode(  ) );
-        jsonTicket.accumulate( KEY_TICKET_STATUS, ticket.getTicketStatus(  ) );
         jsonTicket.accumulate( KEY_TICKET_COMMENT, ticket.getTicketComment(  ) );
 
         JSONArray jsonExtraFields = new JSONArray(  );
