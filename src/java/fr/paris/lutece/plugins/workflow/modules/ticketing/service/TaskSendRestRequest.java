@@ -33,16 +33,6 @@
  */
 package fr.paris.lutece.plugins.workflow.modules.ticketing.service;
 
-import java.text.MessageFormat;
-import java.util.List;
-import java.util.Locale;
-
-import javax.inject.Inject;
-import javax.servlet.http.HttpServletRequest;
-import javax.ws.rs.core.MediaType;
-
-import org.apache.xerces.impl.dv.util.Base64;
-
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
@@ -52,6 +42,7 @@ import fr.paris.lutece.plugins.genericattributes.business.Field;
 import fr.paris.lutece.plugins.genericattributes.business.Response;
 import fr.paris.lutece.plugins.ticketing.business.Ticket;
 import fr.paris.lutece.plugins.ticketing.business.TicketHome;
+import fr.paris.lutece.plugins.ticketing.service.TicketingPocGruService;
 import fr.paris.lutece.plugins.workflowcore.business.resource.ResourceHistory;
 import fr.paris.lutece.plugins.workflowcore.service.resource.IResourceHistoryService;
 import fr.paris.lutece.plugins.workflowcore.service.task.SimpleTask;
@@ -59,8 +50,22 @@ import fr.paris.lutece.portal.business.file.File;
 import fr.paris.lutece.portal.service.i18n.I18nService;
 import fr.paris.lutece.portal.service.util.AppLogService;
 import fr.paris.lutece.portal.service.util.AppPropertiesService;
+
 import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
+
+import org.apache.xerces.impl.dv.util.Base64;
+
+import java.text.MessageFormat;
+
+import java.util.List;
+import java.util.Locale;
+
+import javax.inject.Inject;
+
+import javax.servlet.http.HttpServletRequest;
+
+import javax.ws.rs.core.MediaType;
 
 
 /**
@@ -104,16 +109,13 @@ public class TaskSendRestRequest extends SimpleTask
     private static final String MESSAGE_STATUS_SENT_KO = "module.workflow.ticketing.task_send_rest_request.labelStatusSentKo";
 
     // Properties
-    private static final String PROPERTY_REST_COMPANIES = "workflow-ticketing.rest.companies";
     private static final String PROPERTY_REST_ENDPOINT_COMPANY = "workflow-ticketing.rest.endpoint.company.";
-    private static final String PROPERTY_REST_USERS_COMPANY = "workflow-ticketing.rest.users.company.";
 
     // Errors
     private static final String ERROR_SENDING_TICKET = "Problem when sending the ticket {0} : {1}";
     private static final String ERROR_HTTP = "HTTP ";
 
     // Other constants
-    private static final String SEPARATOR = ",";
     private static final int STATUS_SENT_KO = 0;
     private static final int STATUS_SENT_OK = 1;
 
@@ -148,56 +150,12 @@ public class TaskSendRestRequest extends SimpleTask
 
         if ( ( resourceHistory != null ) && Ticket.TICKET_RESOURCE_TYPE.equals( resourceHistory.getResourceType(  ) ) )
         {
-            // We get the appointment to send
+            // We get the ticket to send
             Ticket ticket = TicketHome.findByPrimaryKey( resourceHistory.getIdResource(  ) );
 
             if ( ticket != null )
             {
-                String strGuid = ticket.getGuid(  );
-                String company = getCompany( strGuid );
-
-                if ( company != null )
-                {
-                    String strRestEndpoint = getEndpoint( company );
-                    WebResource webResource = _client.resource( strRestEndpoint );
-                    JSONObject json = new JSONObject(  );
-                    addTicketJson( json, ticket );
-
-                    ClientResponse response = null;
-                    int nSendStatusCode = STATUS_SENT_OK;
-                    String strSendStatusText = I18nService.getLocalizedString( MESSAGE_STATUS_SENT_OK, Locale.FRANCE ) +
-                        company;
-
-                    try
-                    {
-                        response = webResource.type( MediaType.APPLICATION_JSON ).accept( MediaType.APPLICATION_JSON )
-                                              .put( ClientResponse.class, json.toString(  ) );
-                    }
-                    catch ( final Throwable t )
-                    {
-                        AppLogService.error( buildErrorMessage( ticket, t.getMessage(  ) ) );
-                        nSendStatusCode = STATUS_SENT_KO;
-                        strSendStatusText = I18nService.getLocalizedString( MESSAGE_STATUS_SENT_KO, Locale.FRANCE );
-                    }
-
-                    if ( ( response.getStatus(  ) != 200 ) && ( response.getStatus(  ) != 201 ) )
-                    {
-                        AppLogService.error( buildErrorMessage( ticket, ERROR_HTTP + response.getStatus(  ) ) );
-                        nSendStatusCode = STATUS_SENT_KO;
-                        strSendStatusText = I18nService.getLocalizedString( MESSAGE_STATUS_SENT_KO, Locale.FRANCE );
-                    }
-
-                    ResponseContent responseContent = new ResponseContent( response.getEntity( String.class ) );
-
-                    if ( !ResponseContent.STATUS_CORRECT.equals( responseContent.getStatus(  ) ) )
-                    {
-                        AppLogService.error( buildErrorMessage( ticket, responseContent.getMessage(  ) ) );
-                        nSendStatusCode = STATUS_SENT_KO;
-                        strSendStatusText = I18nService.getLocalizedString( MESSAGE_STATUS_SENT_KO, Locale.FRANCE );
-                    }
-
-                    changeTicketStatus( ticket, nSendStatusCode, strSendStatusText );
-                }
+                sendTicket( ticket );
             }
         }
     }
@@ -206,46 +164,6 @@ public class TaskSendRestRequest extends SimpleTask
     public String getTitle( Locale locale )
     {
         return I18nService.getLocalizedString( MESSAGE_SEND_TICKET, locale );
-    }
-
-    /**
-     * Retrieves the company depending on the user GUID
-     *
-     * @param strGuid
-     *            the user GUID
-     * @return the company if it exists, {@code null} otherwise
-     */
-    private static String getCompany( String strGuid )
-    {
-        String strCompany = null;
-
-        if ( strGuid != null )
-        {
-            String[] companies = AppPropertiesService.getProperty( PROPERTY_REST_COMPANIES ).split( SEPARATOR );
-
-            for ( String strCompanyFromProperties : companies )
-            {
-                String[] users = AppPropertiesService.getProperty( PROPERTY_REST_USERS_COMPANY +
-                        strCompanyFromProperties ).split( SEPARATOR );
-
-                for ( String user : users )
-                {
-                    if ( strGuid.equals( user ) )
-                    {
-                        strCompany = strCompanyFromProperties;
-
-                        break;
-                    }
-                }
-
-                if ( strCompany != null )
-                {
-                    break;
-                }
-            }
-        }
-
-        return strCompany;
     }
 
     /**
@@ -258,6 +176,63 @@ public class TaskSendRestRequest extends SimpleTask
     private static String getEndpoint( String strCompany )
     {
         return AppPropertiesService.getProperty( PROPERTY_REST_ENDPOINT_COMPANY + strCompany );
+    }
+
+    /**
+     * Sends the ticket to the REST endpoint
+     * @param ticket the ticket to send
+     */
+    private void sendTicket( Ticket ticket )
+    {
+        String strGuid = ticket.getGuid(  );
+        String company = TicketingPocGruService.getCompany( strGuid );
+
+        if ( company != null )
+        {
+            String strRestEndpoint = getEndpoint( company );
+            WebResource webResource = _client.resource( strRestEndpoint );
+            JSONObject json = new JSONObject(  );
+            addTicketJson( json, ticket );
+
+            ClientResponse response = null;
+            int nSendStatusCode = STATUS_SENT_OK;
+            String strSendStatusText = I18nService.getLocalizedString( MESSAGE_STATUS_SENT_OK, Locale.FRANCE ) +
+                company;
+
+            try
+            {
+                response = webResource.type( MediaType.APPLICATION_JSON ).accept( MediaType.APPLICATION_JSON )
+                                      .put( ClientResponse.class, json.toString(  ) );
+
+                if ( ( response.getStatus(  ) == 200 ) || ( response.getStatus(  ) == 201 ) )
+                {
+                    ResponseContent responseContent = new ResponseContent( response.getEntity( String.class ) );
+
+                    if ( !ResponseContent.STATUS_CORRECT.equals( responseContent.getStatus(  ) ) )
+                    {
+                        AppLogService.error( buildErrorMessage( ticket, responseContent.getMessage(  ) ) );
+                        nSendStatusCode = STATUS_SENT_KO;
+                        strSendStatusText = I18nService.getLocalizedString( MESSAGE_STATUS_SENT_KO, Locale.FRANCE );
+                    }
+                }
+                else
+                {
+                    AppLogService.error( buildErrorMessage( ticket, ERROR_HTTP + response.getStatus(  ) ) );
+                    nSendStatusCode = STATUS_SENT_KO;
+                    strSendStatusText = I18nService.getLocalizedString( MESSAGE_STATUS_SENT_KO, Locale.FRANCE );
+                }
+            }
+            catch ( final Throwable t )
+            {
+                AppLogService.error( buildErrorMessage( ticket, t.getMessage(  ) ) );
+                nSendStatusCode = STATUS_SENT_KO;
+                strSendStatusText = I18nService.getLocalizedString( MESSAGE_STATUS_SENT_KO, Locale.FRANCE );
+            }
+            finally
+            {
+                changeTicketStatus( ticket, nSendStatusCode, strSendStatusText );
+            }
+        }
     }
 
     /**
@@ -277,7 +252,7 @@ public class TaskSendRestRequest extends SimpleTask
 
     /**
      * Changes the ticket status
-     * 
+     *
      * @param ticket
      *            the ticket to update
      * @param nStatusCode
@@ -336,34 +311,35 @@ public class TaskSendRestRequest extends SimpleTask
                 File file = extraField.getFile(  );
 
                 Entry entry = extraField.getEntry(  );
+                String strExtraFieldField = EMPTY_STRING;
 
                 if ( entry != null )
                 {
-                    jsonExtraField.accumulate( KEY_EXTRA_FIELDS_FIELD, entry.getCode(  ) );
-                }
-                else
-                {
-                    jsonExtraField.accumulate( KEY_EXTRA_FIELDS_FIELD, EMPTY_STRING );
+                    strExtraFieldField = entry.getCode(  );
                 }
 
+                jsonExtraField.accumulate( KEY_EXTRA_FIELDS_FIELD, strExtraFieldField );
+
                 Field field = extraField.getField(  );
+                String strExtraFieldValue = EMPTY_STRING;
 
                 if ( field != null )
                 {
-                    jsonExtraField.accumulate( KEY_EXTRA_FIELDS_VALUE, field.getCode(  ) );
+                    strExtraFieldValue = field.getValue(  );
                 }
                 else
                 {
                     if ( file != null )
                     {
-                        jsonExtraField.accumulate( KEY_EXTRA_FIELDS_VALUE,
-                            Base64.encode( file.getPhysicalFile(  ).getValue(  ) ) );
+                        strExtraFieldValue = Base64.encode( file.getPhysicalFile(  ).getValue(  ) );
                     }
                     else
                     {
-                        jsonExtraField.accumulate( KEY_EXTRA_FIELDS_VALUE, EMPTY_STRING );
+                        strExtraFieldValue = extraField.getResponseValue(  );
                     }
                 }
+
+                jsonExtraField.accumulate( KEY_EXTRA_FIELDS_VALUE, strExtraFieldValue );
 
                 if ( file != null )
                 {
