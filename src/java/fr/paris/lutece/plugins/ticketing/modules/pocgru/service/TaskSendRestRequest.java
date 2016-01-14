@@ -31,7 +31,7 @@
  *
  * License 1.0
  */
-package fr.paris.lutece.plugins.workflow.modules.ticketing.service;
+package fr.paris.lutece.plugins.ticketing.modules.pocgru.service;
 
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
@@ -104,12 +104,12 @@ public class TaskSendRestRequest extends SimpleTask
     private static final String KEY_EXTRA_FIELDS_METADATA_FILENAME = "filename";
 
     // Messages
-    private static final String MESSAGE_SEND_TICKET = "module.workflow.ticketing.task_send_rest_request.labelSendTicket";
-    private static final String MESSAGE_STATUS_SENT_OK = "module.workflow.ticketing.task_send_rest_request.labelStatusSentOk";
-    private static final String MESSAGE_STATUS_SENT_KO = "module.workflow.ticketing.task_send_rest_request.labelStatusSentKo";
+    private static final String MESSAGE_SEND_TICKET = "module.ticketing.pocgru.task_send_rest_request.labelSendTicket";
+    private static final String MESSAGE_STATUS_SENT_OK = "module.ticketing.pocgru.task_send_rest_request.labelStatusSentOk";
+    private static final String MESSAGE_STATUS_SENT_KO = "module.ticketing.pocgru.task_send_rest_request.labelStatusSentKo";
 
     // Properties
-    private static final String PROPERTY_REST_ENDPOINT_COMPANY = "workflow-ticketing.rest.endpoint.company.";
+    private static final String PROPERTY_REST_ENDPOINT_COMPANY = "ticketing-pocgru.rest.endpoint.company.";
 
     // Errors
     private static final String ERROR_SENDING_TICKET = "Problem when sending the ticket {0} : {1}";

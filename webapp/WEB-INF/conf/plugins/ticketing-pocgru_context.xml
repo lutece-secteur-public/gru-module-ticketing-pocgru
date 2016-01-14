@@ -11,11 +11,11 @@
        http://www.springframework.org/schema/tx/spring-tx-3.0.xsd">
        
     <!-- Task send REST request -->
-    <bean id="workflow-ticketing.taskSendRestRequest" class="fr.paris.lutece.plugins.workflow.modules.ticketing.service.TaskSendRestRequest" scope="prototype" />
-    <bean id="workflow-ticketing.taskTypeSendRestRequest" class="fr.paris.lutece.plugins.workflowcore.business.task.TaskType"
+    <bean id="ticketing-pocgru.taskSendRestRequest" class="fr.paris.lutece.plugins.ticketing.modules.pocgru.service.TaskSendRestRequest" scope="prototype" />
+    <bean id="ticketing-pocgru.taskTypeSendRestRequest" class="fr.paris.lutece.plugins.workflowcore.business.task.TaskType"
         p:key="taskTicketingSendRestRequest"
-        p:titleI18nKey="module.workflow.ticketing.task_send_rest_request.title"
-        p:beanName="workflow-ticketing.taskSendRestRequest"
+        p:titleI18nKey="module.ticketing.pocgru.task_send_rest_request.title"
+        p:beanName="ticketing-pocgru.taskSendRestRequest"
         p:taskForAutomaticAction="true" />
 	
 </beans>
