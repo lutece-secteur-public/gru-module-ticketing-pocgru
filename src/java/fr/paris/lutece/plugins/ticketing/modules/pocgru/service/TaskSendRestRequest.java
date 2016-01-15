@@ -50,21 +50,18 @@ import fr.paris.lutece.portal.business.file.File;
 import fr.paris.lutece.portal.service.i18n.I18nService;
 import fr.paris.lutece.portal.service.util.AppLogService;
 import fr.paris.lutece.portal.service.util.AppPropertiesService;
-
 import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
 
 import org.apache.xerces.impl.dv.util.Base64;
 
 import java.text.MessageFormat;
-
 import java.util.List;
 import java.util.Locale;
 
 import javax.inject.Inject;
-
 import javax.servlet.http.HttpServletRequest;
-
+import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 
 
@@ -107,6 +104,7 @@ public class TaskSendRestRequest extends SimpleTask
 
     // Properties
     private static final String PROPERTY_REST_ENDPOINT_COMPANY = "ticketing-pocgru.rest.endpoint.company.";
+    private static final String PROPERTY_REST_TOKEN = "ticketing-pocgru.rest.authentication.token";
 
     // Errors
     private static final String ERROR_SENDING_TICKET = "Problem when sending the ticket {0} : {1}";
@@ -198,8 +196,9 @@ public class TaskSendRestRequest extends SimpleTask
 
             try
             {
-                response = webResource.type( MediaType.APPLICATION_JSON ).accept( MediaType.APPLICATION_JSON )
-                                      .put( ClientResponse.class, json.toString(  ) );
+                response = webResource.type( MediaType.APPLICATION_JSON ).accept( MediaType.APPLICATION_JSON ).header( HttpHeaders.AUTHORIZATION, "Bearer " + AppPropertiesService.getProperty(    
+                        TaskSendRestRequest.PROPERTY_REST_TOKEN ) ).post( ClientResponse.class, json.toString(  ) );
+               
 
                 if ( ( response.getStatus(  ) == 200 ) || ( response.getStatus(  ) == 201 ) )
                 {
