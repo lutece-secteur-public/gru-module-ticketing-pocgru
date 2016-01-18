@@ -125,6 +125,7 @@ public class TaskSendRestRequest extends SimpleTask
     private static final String LOG_URL = "Uses URL : ";
     private static final String LOG_TOKEN_TYPE = "Uses token type : ";
     private static final String LOG_HEADER_AUTHORIZATION = "Uses authorization header : ";
+    private static final String LOG_RESPONSE = "Response content from endpoint : ";
 
     // Services
     @Inject
@@ -233,10 +234,14 @@ public class TaskSendRestRequest extends SimpleTask
                 response = webResource.type( MediaType.APPLICATION_JSON ).accept( MediaType.APPLICATION_JSON )
                                       .header( HttpHeaders.AUTHORIZATION, strAuthorizationHeaderBearer )
                                       .post( ClientResponse.class, json.toString(  ) );
+                
+                String strResponseContent = response.getEntity( String.class );
+                
+                AppLogService.info( LOG_TASK_NAME + LOG_RESPONSE + strResponseContent );
 
                 if ( ( response.getStatus(  ) == 200 ) || ( response.getStatus(  ) == 201 ) )
                 {
-                    ResponseContent responseContent = new ResponseContent( response.getEntity( String.class ) );
+                    ResponseContent responseContent = new ResponseContent( strResponseContent );
 
                     if ( !ResponseContent.STATUS_CORRECT.equals( responseContent.getStatus(  ) ) )
                     {
@@ -448,6 +453,7 @@ public class TaskSendRestRequest extends SimpleTask
     private class ResponseContent
     {
         // Constants for JSON message
+        private static final String KEY_RESPONSE = "response";
         private static final String KEY_STATUS = "status";
         private static final String KEY_MESSAGE = "message";
 
@@ -467,8 +473,17 @@ public class TaskSendRestRequest extends SimpleTask
         ResponseContent( String response )
         {
             JSONObject jsonResponse = JSONObject.fromObject( response );
-            _strStatus = jsonResponse.getString( KEY_STATUS );
-            _strMessage = jsonResponse.getString( KEY_MESSAGE );
+            JSONObject jsonResponseContent = jsonResponse.getJSONObject( KEY_RESPONSE );
+            _strStatus = jsonResponseContent.getString( KEY_STATUS );
+            
+            if ( !STATUS_CORRECT.equals( _strStatus ) )
+            {
+                _strMessage = jsonResponseContent.getString( KEY_MESSAGE );
+            }
+            else
+            {
+                _strMessage = "";
+            }
         }
 
         /**
