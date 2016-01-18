@@ -50,17 +50,21 @@ import fr.paris.lutece.portal.business.file.File;
 import fr.paris.lutece.portal.service.i18n.I18nService;
 import fr.paris.lutece.portal.service.util.AppLogService;
 import fr.paris.lutece.portal.service.util.AppPropertiesService;
+
 import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
 
 import org.apache.xerces.impl.dv.util.Base64;
 
 import java.text.MessageFormat;
+
 import java.util.List;
 import java.util.Locale;
 
 import javax.inject.Inject;
+
 import javax.servlet.http.HttpServletRequest;
+
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 
@@ -104,7 +108,9 @@ public class TaskSendRestRequest extends SimpleTask
 
     // Properties
     private static final String PROPERTY_REST_ENDPOINT_COMPANY = "ticketing-pocgru.rest.endpoint.company.";
-    private static final String PROPERTY_REST_TOKEN = "ticketing-pocgru.rest.authentication.token";
+    private static final String PROPERTY_REST_AUTHENTICATION_URL = "ticketing-pocgru.rest.authentication.url";
+    private static final String PROPERTY_REST_AUTHENTICATION_TOKEN = "ticketing-pocgru.rest.authentication.token";
+    private static final String PROPERTY_REST_AUTHENTICATION_DATA = "ticketing-pocgru.rest.authentication.data";
 
     // Errors
     private static final String ERROR_SENDING_TICKET = "Problem when sending the ticket {0} : {1}";
@@ -113,11 +119,19 @@ public class TaskSendRestRequest extends SimpleTask
     // Other constants
     private static final int STATUS_SENT_KO = 0;
     private static final int STATUS_SENT_OK = 1;
+    private static final String HEADER_AUTHORIZATION_PREFIX_BASIC = "Basic ";
+    private static final String HEADER_AUTHORIZATION_PREFIX_BEARER = "Bearer ";
+    private static final String LOG_TASK_NAME = " - TaskSendRestRequest - ";
+    private static final String LOG_URL = "Uses URL : ";
+    private static final String LOG_TOKEN_TYPE = "Uses token type : ";
+    private static final String LOG_HEADER_AUTHORIZATION = "Uses authorization header : ";
 
     // Services
     @Inject
     private IResourceHistoryService _resourceHistoryService;
     private Client _client;
+    private String _strRestEndpointToken;
+    private String _strTokenRequestData;
     private boolean _bInit;
 
     /**
@@ -129,6 +143,8 @@ public class TaskSendRestRequest extends SimpleTask
         if ( !_bInit )
         {
             _client = Client.create(  );
+            _strRestEndpointToken = AppPropertiesService.getProperty( PROPERTY_REST_AUTHENTICATION_URL );
+            _strTokenRequestData = AppPropertiesService.getProperty( PROPERTY_REST_AUTHENTICATION_DATA );
             _bInit = true;
         }
     }
@@ -184,8 +200,8 @@ public class TaskSendRestRequest extends SimpleTask
 
         if ( company != null )
         {
-            String strRestEndpoint = getEndpoint( company );
-            WebResource webResource = _client.resource( strRestEndpoint );
+            String strRestEndpointTicket = getEndpoint( company );
+            WebResource webResource = _client.resource( _strRestEndpointToken );
             JSONObject json = new JSONObject(  );
             addTicketJson( json, ticket );
 
@@ -196,9 +212,27 @@ public class TaskSendRestRequest extends SimpleTask
 
             try
             {
-                response = webResource.type( MediaType.APPLICATION_JSON ).accept( MediaType.APPLICATION_JSON ).header( HttpHeaders.AUTHORIZATION, "Bearer " + AppPropertiesService.getProperty(    
-                        TaskSendRestRequest.PROPERTY_REST_TOKEN ) ).post( ClientResponse.class, json.toString(  ) );
-               
+                String strAuthorizationHeaderBasic = HEADER_AUTHORIZATION_PREFIX_BASIC +
+                    AppPropertiesService.getProperty( TaskSendRestRequest.PROPERTY_REST_AUTHENTICATION_TOKEN );
+                AppLogService.info( LOG_TASK_NAME + LOG_URL + _strRestEndpointToken );
+                AppLogService.info( LOG_TASK_NAME + LOG_HEADER_AUTHORIZATION + strAuthorizationHeaderBasic );
+
+                response = webResource.type( MediaType.APPLICATION_FORM_URLENCODED_TYPE )
+                                      .header( HttpHeaders.AUTHORIZATION, strAuthorizationHeaderBasic )
+                                      .post( ClientResponse.class, _strTokenRequestData );
+
+                Token token = new Token( response.getEntity( String.class ) );
+
+                webResource = _client.resource( strRestEndpointTicket );
+
+                String strAuthorizationHeaderBearer = HEADER_AUTHORIZATION_PREFIX_BEARER + token.getValue(  );
+                AppLogService.info( LOG_TASK_NAME + LOG_URL + strRestEndpointTicket );
+                AppLogService.info( LOG_TASK_NAME + LOG_TOKEN_TYPE + token.getType(  ) );
+                AppLogService.info( LOG_TASK_NAME + LOG_HEADER_AUTHORIZATION + strAuthorizationHeaderBearer );
+
+                response = webResource.type( MediaType.APPLICATION_JSON ).accept( MediaType.APPLICATION_JSON )
+                                      .header( HttpHeaders.AUTHORIZATION, strAuthorizationHeaderBearer )
+                                      .post( ClientResponse.class, json.toString(  ) );
 
                 if ( ( response.getStatus(  ) == 200 ) || ( response.getStatus(  ) == 201 ) )
                 {
@@ -356,6 +390,54 @@ public class TaskSendRestRequest extends SimpleTask
         jsonTicket.accumulate( KEY_EXTRA_FIELDS, jsonExtraFields );
 
         json.accumulate( KEY_TICKET, jsonTicket );
+    }
+
+    /**
+     * This class represents a token
+     *
+     */
+    private class Token
+    {
+        // Constants for JSON message
+        private static final String KEY_TOKEN_TYPE = "token_type";
+        private static final String KEY_ACCESS_TOKEN = "access_token";
+
+        // Class attributes
+        private final String _type;
+        private final String _value;
+
+        /**
+         * Constructor
+         *
+         * @param response
+         *            the String containing the response
+         */
+        Token( String response )
+        {
+            JSONObject jsonResponse = JSONObject.fromObject( response );
+            _type = jsonResponse.getString( KEY_TOKEN_TYPE );
+            _value = jsonResponse.getString( KEY_ACCESS_TOKEN );
+        }
+
+        /**
+         * Gives the type
+         *
+         * @return the type
+         */
+        public String getType(  )
+        {
+            return _type;
+        }
+
+        /**
+         * Gives the value
+         *
+         * @return the value
+         */
+        public String getValue(  )
+        {
+            return _value;
+        }
     }
 
     /**
