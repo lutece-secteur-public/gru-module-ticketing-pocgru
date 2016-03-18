@@ -10,7 +10,7 @@
     <groupId>fr.paris.lutece.plugins</groupId>
     <artifactId>module-ticketing-pocgru</artifactId>
     <packaging>lutece-plugin</packaging>
-    <version>1.0.0</version>
+    <version>1.0.1-SNAPSHOT</version>
     <name>Lutece Ticketing POC GRU module</name>
 
     <repositories>
@@ -47,7 +47,7 @@
         <connection>scm:git:https://github.com/lutece-secteur-public/gru-module-ticketing-pocgru.git</connection>
         <developerConnection>scm:git:https://github.com/lutece-secteur-public/gru-module-ticketing-pocgru.git</developerConnection>
         <url>https://github.com/lutece-secteur-public/gru-module-ticketing-pocgru.git</url>
-      <tag>gru-module-ticketing-pocgru-1.0.0</tag>
+      <tag>HEAD</tag>
   </scm>
     
 </project>
