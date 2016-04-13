@@ -40,8 +40,8 @@ import com.sun.jersey.api.client.WebResource;
 import fr.paris.lutece.plugins.genericattributes.business.Entry;
 import fr.paris.lutece.plugins.genericattributes.business.Field;
 import fr.paris.lutece.plugins.genericattributes.business.Response;
-import fr.paris.lutece.plugins.ticketing.business.Ticket;
-import fr.paris.lutece.plugins.ticketing.business.TicketHome;
+import fr.paris.lutece.plugins.ticketing.business.ticket.Ticket;
+import fr.paris.lutece.plugins.ticketing.business.ticket.TicketHome;
 import fr.paris.lutece.plugins.ticketing.service.TicketingPocGruService;
 import fr.paris.lutece.plugins.workflowcore.business.resource.ResourceHistory;
 import fr.paris.lutece.plugins.workflowcore.service.resource.IResourceHistoryService;
@@ -234,9 +234,9 @@ public class TaskSendRestRequest extends SimpleTask
                 response = webResource.type( MediaType.APPLICATION_JSON ).accept( MediaType.APPLICATION_JSON )
                                       .header( HttpHeaders.AUTHORIZATION, strAuthorizationHeaderBearer )
                                       .post( ClientResponse.class, json.toString(  ) );
-                
+
                 String strResponseContent = response.getEntity( String.class );
-                
+
                 AppLogService.info( LOG_TASK_NAME + LOG_RESPONSE + strResponseContent );
 
                 if ( ( response.getStatus(  ) == 200 ) || ( response.getStatus(  ) == 201 ) )
@@ -475,7 +475,7 @@ public class TaskSendRestRequest extends SimpleTask
             JSONObject jsonResponse = JSONObject.fromObject( response );
             JSONObject jsonResponseContent = jsonResponse.getJSONObject( KEY_RESPONSE );
             _strStatus = jsonResponseContent.getString( KEY_STATUS );
-            
+
             if ( !STATUS_CORRECT.equals( _strStatus ) )
             {
                 _strMessage = jsonResponseContent.getString( KEY_MESSAGE );
